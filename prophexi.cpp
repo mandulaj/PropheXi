@@ -17,6 +17,7 @@
 #include "serialib/lib/serialib.h"
 #include <unistd.h>
 #include <stdio.h>
+#include <memory.h>
 #include <iostream>
 #include <time.h> 
 #include <fstream>
@@ -37,7 +38,14 @@
 #include <metavision/sdk/core/utils/rate_estimator.h>
 #include <metavision/sdk/driver/camera.h>
 #include <metavision/hal/facilities/i_trigger_in.h>
-#include <metavision/hal/facilities/i_device_control.h>
+#include <metavision/hal/facilities/i_camera_synchronization.h>
+
+// #include <metavision/hal/facilities/i_device_control.h>
+
+
+#include <m3api/xiApi.h> // Linux, OSX
+
+#define CE(func) {XI_RETURN stat = (func); if (XI_OK!=stat) {printf("Error:%d returned from function:"#func"\n",stat);throw "Error";}}
 
 
 static const int ESCAPE = 27;
@@ -267,6 +275,118 @@ int process_IMU(const std::string &custom_serial_port, const std::string &output
 
 
 
+int setup_xi()
+{
+	HANDLE xiH = NULL;
+	try
+	{
+		printf("Opening first camera...\n");
+		CE(xiOpenDevice(0, &xiH));
+
+		printf("Setting exposure time to 10ms...\n");
+        CE(xiSetParamInt(xiH, XI_PRM_AEAG_LEVEL, 40));
+        // CE(xiSetParamFloat(xiH, XI_PRM_AG_MAX_LIMIT, 6));
+        CE(xiSetParamFloat(xiH, XI_PRM_AE_MAX_LIMIT, 15000));
+		CE(xiSetParamInt(xiH, XI_PRM_EXPOSURE, 10000));
+		CE(xiSetParamInt(xiH,XI_PRM_BUFFER_POLICY,XI_BP_SAFE));
+		CE(xiSetParamInt(xiH, XI_PRM_AEAG, XI_ON));
+		
+
+        CE(xiSetParamInt(xiH, XI_PRM_ACQ_TIMING_MODE, XI_ACQ_TIMING_MODE_FRAME_RATE));
+        CE(xiSetParamInt(xiH,XI_PRM_FRAMERATE, 60));
+
+
+        int is_color = 0;
+		CE(xiGetParamInt(xiH, XI_PRM_IMAGE_IS_COLOR, &is_color));
+		if (is_color)
+		{
+			// color camera
+			CE(xiSetParamInt(xiH, XI_PRM_IMAGE_DATA_FORMAT, XI_RGB24));
+			CE(xiSetParamInt(xiH, XI_PRM_AUTO_WB, XI_ON));
+			CE(xiSetParamFloat(xiH, XI_PRM_EXP_PRIORITY, 1));
+		}
+
+
+        // GPIO Setup 
+        CE(xiSetParamInt(xiH, XI_PRM_GPO_SELECTOR, 1));
+        CE(xiSetParamInt(xiH, XI_PRM_GPO_MODE,  XI_GPO_EXPOSURE_ACTIVE_NEG));
+
+
+
+		printf("Starting acquisition...\n");
+		CE(xiStartAcquisition(xiH));
+
+        long long last_ts = 0;
+
+
+
+        
+
+		for (int image_id = 0; image_id < 100000 + 10; image_id++)
+		{
+			XI_IMG image; // image buffer
+			memset(&image, 0, sizeof(image));
+			image.size = sizeof(XI_IMG);
+			CE(xiGetImage(xiH, 5000, &image)); // getting next image from the camera opened
+
+            long long current_ts = image.tsSec * 1000000 + image.tsUSec;
+            long long diff_us = current_ts - last_ts;
+            last_ts = current_ts;
+
+            float fps = 1e6/(diff_us);
+
+
+            // float temperature = 0.0;
+            // xiSetParamInt(xiH, XI_PRM_TEMP_SELECTOR, XI_TEMP_IMAGE_SENSOR_DIE_RAW); 
+            // xiGetParamFloat(xiH, XI_PRM_TEMP, &temperature); 
+            // printf("%f\n", temperature);
+
+
+
+            int number_of_skipped_frames = 0;
+            xiSetParamInt(xiH, XI_PRM_COUNTER_SELECTOR, XI_CNT_SEL_API_SKIPPED_FRAMES);
+            xiGetParamInt(xiH, XI_PRM_COUNTER_VALUE, &number_of_skipped_frames);
+	
+
+
+
+			unsigned char pixel = *(unsigned char*)image.bp;
+			printf("Image %d (%dx%d) received from camera. First pixel value: %d: ts: %d.%d, diff: %ld, fps: %f, skipped: %d\n", image_id, (int)image.width, (int)image.height, pixel, image.tsSec, image.tsUSec, diff_us, fps, number_of_skipped_frames);
+			if (image_id < 10)
+				continue; // wait for autoexposure stabilize
+			char filename[100] = "";
+			sprintf(filename, "imgs/image%03d.tif", image_id);
+			//WriteImage(&image, filename);
+
+
+
+        }
+
+		printf("Stopping acquisition...\n");
+		xiStopAcquisition(xiH);
+	}
+	catch (const char* err)
+	{
+		printf("Error: %s\n", err);
+	}
+	xiCloseDevice(xiH);
+	printf("Done\n");
+#if defined (_WIN32)
+	Sleep(5000);
+#else
+	usleep(5000*1000);
+#endif
+	return 0;
+}
+
+
+
+
+
+
+
+
+
 int main(int argc, char *argv[]) {
     std::string serial;
     std::string imu_serial;
@@ -326,8 +446,12 @@ int main(int argc, char *argv[]) {
 
     // std::thread imu_thread (process_IMU, imu_serial, out_imu_file_path); 
 
+    // std::thread xi_thread (setup_xi);
 
     // Setup Camera
+
+
+    // while(1){}
 
     do {
         Metavision::Camera camera;
@@ -350,12 +474,14 @@ int main(int argc, char *argv[]) {
             }
 
             Metavision::I_TriggerIn *i_trigger_in = camera.get_device().get_facility<Metavision::I_TriggerIn>();
-            Metavision::I_DeviceControl *i_dev_ctrl = camera.get_device().get_facility<Metavision::I_DeviceControl>();
+            // Metavision::I_DeviceControl *i_dev_ctrl = camera.get_device().get_facility<Metavision::I_DeviceControl>();
+            Metavision::I_CameraSynchronization *i_cam_sync = camera.get_device().get_facility<Metavision::I_CameraSynchronization>();
 
-            if(i_trigger_in && i_dev_ctrl){
-                i_trigger_in->enable(0);
-                i_dev_ctrl->set_mode_master();
-                std::cout << "Trigger Enabled: " << i_trigger_in->is_enabled(0) << std::endl;
+            if(i_trigger_in && i_cam_sync){
+                i_cam_sync->set_mode_master();
+
+                i_trigger_in->enable(Metavision::I_TriggerIn::Channel::Main);
+                std::cout << "Trigger Enabled: " << i_trigger_in->is_enabled(Metavision::I_TriggerIn::Channel::Main) << std::endl;
             }
 
             camera_is_opened = true;

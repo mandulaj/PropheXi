@@ -11,3 +11,11 @@ CTestTestfile.cmake
 _deps
 build
 .vscode
+_libs
+
+events
+
+prophexi
+
+*.raw
+*.bias

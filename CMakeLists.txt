@@ -7,10 +7,10 @@
 # on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and limitations under the License.
 
-project(sample_recorder)
+project(prophexi)
 
 
-set (sample recorder)
+set (sample prophexi)
 set (common_libraries MetavisionSDK::driver MetavisionSDK::core Boost::program_options opencv_highgui)
 
 set(THREADS_PREFER_PTHREAD_FLAG ON)
@@ -24,14 +24,25 @@ find_package(MetavisionSDK COMPONENTS core driver ui REQUIRED)
 find_package(OpenCV COMPONENTS core highgui imgproc videoio imgcodecs calib3d objdetect REQUIRED)
 
 
+# Serial
 add_subdirectory(serialib/lib)
 
 add_library(serialib STATIC serialib/lib/serialib.cpp)
+
+# Xiapi
+include_directories(_libs)
+include_directories(_libs/xiAPI)
+link_libraries(m3api)
+
+link_libraries(tiff)
 
 
 add_executable(${sample} ${sample}.cpp)
 target_link_libraries(${sample} PRIVATE ${common_libraries})
 target_link_libraries(${sample} serialib)
+
+
+set_target_properties(${sample} PROPERTIES RUNTIME_OUTPUT_DIRECTORY "../" )
 
 
 #install(TARGETS ${sample}
