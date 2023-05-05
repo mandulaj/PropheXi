@@ -36,7 +36,6 @@
 #include <opencv2/highgui/highgui_c.h>
 #endif
 #include <opencv2/imgproc.hpp>
-
 #include <metavision/sdk/base/utils/log.h>
 #include <metavision/sdk/core/utils/cd_frame_generator.h>
 #include <metavision/sdk/core/utils/rate_estimator.h>
