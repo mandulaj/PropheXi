@@ -360,7 +360,6 @@ int setup_xi()
         CE(xiSetParamInt(xiH,XI_PRM_FRAMERATE, 50));
 
         // CE(xiSetParamInt(xiH, XI_PRM_IMAGE_DATA_FORMAT, XI_RGB24));
-        // CE(xiSetParamInt(xiH, XI_PRM_IMAGE_DATA_FORMAT, XI_RAW16));
         CE(xiSetParamInt(xiH, XI_PRM_IMAGE_DATA_FORMAT, XI_RAW16));
 
       
