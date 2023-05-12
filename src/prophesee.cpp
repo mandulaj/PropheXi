@@ -1,3 +1,16 @@
+/**********************************************************************************************************************
+ * Copyright (c) 2023 Jakub Mandula.                                                                                       *
+ *                                                                                                                    *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of this 
+ * software and associated documentation files (the “Software”), to deal in the Software 
+ * without restriction, including without limitation the rights to use, copy, modify, merge, 
+ * publish, distribute, sublicense, and/or sell copies of the Software, and to permit 
+ * persons to whom the Software is furnished to do so, subject to the following conditions:
+ * 
+ * The above copyright notice and this permission notice shall be included in all copies or
+ * substantial portions of the Software.
+ **********************************************************************************************************************/
+
 #include "prophesee.hpp"
 
 #include <unistd.h>
@@ -126,158 +139,6 @@ std::atomic<bool> signal_caught{false};
 }
 } // anonymous namespace
 
-
-
-
-/*
-int dvs(struct config_data * config_data){
-    bool do_retry = false;
-    do {
-        Metavision::Camera camera;
-        bool camera_is_opened = false;
-
-
-        try {
-            if (!config_data->serial.empty()) {
-                camera = Metavision::Camera::from_serial(config_data->serial);
-            } else {
-                camera = Metavision::Camera::from_first_available();
-            }
-
-            if (config_data->biases_file != "") {
-                camera.biases().set_from_file(config_data->biases_file);
-            }
-
-            if (!config_data->roi.empty()) {
-                camera.roi().set({
-                    config_data->roi[0], 
-                    config_data->roi[1], 
-                    config_data->roi[2], 
-                    config_data->roi[3]});
-            }
-
-            Metavision::I_TriggerIn *i_trigger_in = camera.get_device().get_facility<Metavision::I_TriggerIn>();
-            // Metavision::I_DeviceControl *i_dev_ctrl = camera.get_device().get_facility<Metavision::I_DeviceControl>();
-            Metavision::I_CameraSynchronization *i_cam_sync = camera.get_device().get_facility<Metavision::I_CameraSynchronization>();
-
-            if(i_trigger_in && i_cam_sync){
-                i_cam_sync->set_mode_master();
-
-                i_trigger_in->enable(Metavision::I_TriggerIn::Channel::Main);
-                std::cout << "Trigger Enabled: " << i_trigger_in->is_enabled(Metavision::I_TriggerIn::Channel::Main) << std::endl;
-            }
-
-            camera_is_opened = true;
-        } catch (Metavision::CameraException &e) { MV_LOG_ERROR() << e.what(); }
-        
-
-        if (!camera_is_opened) {
-            if (do_retry) {
-                std::this_thread::sleep_for(std::chrono::seconds(1));
-                MV_LOG_INFO() << "Trying to reopen camera...";
-                continue;
-            } else {
-                return -1;
-            }
-        } else {
-            MV_LOG_INFO() << "Camera has been opened successfully.";
-        }
-
-        // Add runtime error callback
-        camera.add_runtime_error_callback([&do_retry](const Metavision::CameraException &e) {
-            MV_LOG_ERROR() << e.what();
-            do_retry = true;
-        });
-
-        // Get the geometry of the camera
-        auto &geometry = camera.geometry(); // Get the geometry of the camera
-
-        // // All cameras have CDs events
-        std::string cd_window_name("CD Events");
-        cv::Mat cd_frame;
-        Metavision::timestamp cd_frame_ts{0};
-        Metavision::CDFrameGenerator cd_frame_generator(geometry.width(), geometry.height());
-        cd_frame_generator.set_display_accumulation_time_us(10000);
-
-        double avg_rate, peak_rate;
-        Metavision::RateEstimator cd_rate_estimator(
-            [&avg_rate, &peak_rate](Metavision::timestamp ts, double arate, double prate) {
-                avg_rate  = arate;
-                peak_rate = prate;
-            },
-            100000, 1000000, true);
-        int cd_events_cb_id = setup_cd_callback_and_window(camera, cd_frame, cd_frame_ts, cd_frame_generator,
-                                                           cd_rate_estimator, cd_window_name);
-
-        // Start the camera streaming
-        camera.start();
-
-        bool record  = false;
-
-        bool is_roi_set    = true;
-        bool osc_available = false;
-        bool osc_ready     = false;
-        bool osd           = false;
-
-        std::string raw_file_name;
-
-
-        while (!signal_caught && camera.is_running()) {
-
-            
-
-            if (!cd_frame.empty()) {
-                std::string text;
-                if (osd) {
-                    text = human_readable_time(cd_frame_ts) + " / " +
-                           human_readable_time(camera.offline_streaming_control().get_duration());
-                } else {
-                    text = human_readable_time(cd_frame_ts);
-                }
-                text += "     ";
-                text += human_readable_rate(avg_rate);
-                cv::putText(cd_frame, text, cv::Point(10, 20), cv::FONT_HERSHEY_PLAIN, 1, cv::Scalar(108, 143, 255), 1,
-                            cv::LINE_AA);
-                cv::imshow(cd_window_name, cd_frame);
-            }
-            int key = process_ui_for(33);
-            switch (key) {
-                case 'q':
-                case ESCAPE:
-                camera.stop();
-                do_retry = false;
-                break;
-
-                case SPACE:
-
-
-                    if (!record) {
-                        raw_file_name = get_current_time_file_name(config_data->out_raw_file_path, std::string("_events.raw"));
-                        MV_LOG_INFO() << "Started recording RAW in" << raw_file_name;
-                        camera.start_recording(raw_file_name);
-                        record = true;
-                    } else {
-                        MV_LOG_INFO() << "Stopped recording RAW in" << config_data->out_raw_file_path;
-                        camera.stop_recording();
-                        record = false;
-                    }
-                    break;
-
-
-
-            }
-        }
-
-
-    } while (!signal_caught && do_retry);
-}
-
-*/
-
-
-// Prophesee::Prophesee(Prophesee_config &config) : Device() {
-
-// }
 
 
 

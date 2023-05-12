@@ -1,3 +1,17 @@
+/**********************************************************************************************************************
+ * Copyright (c) 2023 Jakub Mandula.                                                                                       *
+ *                                                                                                                    *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of this 
+ * software and associated documentation files (the “Software”), to deal in the Software 
+ * without restriction, including without limitation the rights to use, copy, modify, merge, 
+ * publish, distribute, sublicense, and/or sell copies of the Software, and to permit 
+ * persons to whom the Software is furnished to do so, subject to the following conditions:
+ * 
+ * The above copyright notice and this permission notice shall be included in all copies or
+ * substantial portions of the Software.
+ **********************************************************************************************************************/
+
+
 #include "ximea.hpp"
 #include "device.hpp"
 
@@ -74,150 +88,6 @@ void WriteImage(cv::Mat& image, const char* filename)
 	TIFFWriteDirectory(tiff_img);
 	TIFFClose(tiff_img);
 }
-
-
-
-
-/*
-
-
-int setup_xi(struct config_data * config_data)
-{
-	HANDLE xiH = NULL;
-	try
-	{
-
-		printf("Opening first camera...\n");
-		CE(xiOpenDevice(0, &xiH));
-
-        xiSetParamInt(xiH, XI_PRM_DEBUG_LEVEL, XI_DL_WARNING);
-        xiSetParamInt(xiH, XI_PRM_DEBUG_LEVEL, XI_DL_DISABLED);
-		printf("Setting exposure time to 10ms...\n");
-        
-        // Target Exposure Level
-        CE(xiSetParamInt(xiH, XI_PRM_AEAG_LEVEL, 26));
-        // Max exposure limit < 16.6ms
-        CE(xiSetParamFloat(xiH, XI_PRM_AE_MAX_LIMIT, 18000));
-        CE(xiSetParamFloat(xiH, XI_PRM_AG_MAX_LIMIT, 5.5));
-        CE(xiSetParamFloat(xiH, XI_PRM_EXP_PRIORITY, 0.8));
-		CE(xiSetParamInt(xiH, XI_PRM_EXPOSURE, 10000));
-		CE(xiSetParamInt(xiH, XI_PRM_AEAG, XI_ON));
-		
-
-		CE(xiSetParamInt(xiH,XI_PRM_BUFFER_POLICY,XI_BP_SAFE));
-        CE(xiSetParamInt(xiH, XI_PRM_ACQ_TIMING_MODE, XI_ACQ_TIMING_MODE_FRAME_RATE));
-        CE(xiSetParamInt(xiH,XI_PRM_FRAMERATE, 50));
-
-        // CE(xiSetParamInt(xiH, XI_PRM_IMAGE_DATA_FORMAT, XI_RGB24));
-        CE(xiSetParamInt(xiH, XI_PRM_IMAGE_DATA_FORMAT, XI_RAW16));
-
-      
-        // GPIO Setup 
-        CE(xiSetParamInt(xiH, XI_PRM_GPO_SELECTOR, 1));
-        CE(xiSetParamInt(xiH, XI_PRM_GPO_MODE,  XI_GPO_EXPOSURE_ACTIVE_NEG));
-
-        int img_size_bytes = 0;
-		CE(xiGetParamInt(xiH, XI_PRM_IMAGE_PAYLOAD_SIZE, &img_size_bytes));
-        // unsigned char * img_buffer = (unsigned char*)malloc(img_size_bytes);
-
-        int width, height;
-        xiGetParamInt(xiH, XI_PRM_WIDTH, &width);
-        xiGetParamInt(xiH, XI_PRM_HEIGHT, &height);
-
-
-        printf("Image: %dx%dx3 = %d size = %d\n", width, height, width*height*2, img_size_bytes );
-
-
-        // cv::Mat cv_mat_image = cv::Mat(height,width,CV_8UC3);
-        cv::Mat cv_mat_image = cv::Mat(height,width,CV_16UC1);
-        // cv::Mat cv_mat_image = cv::Mat(height,width,CV_8UC1);
-
-
-		printf("Starting acquisition...\n");
-		CE(xiStartAcquisition(xiH));
-
-        long long last_ts = 0;
-
-        
-        
-
-		for (int image_id = 0; image_id < 100000 + 10; image_id++)
-		{
-			XI_IMG image; // image buffer
-			memset(&image, 0, sizeof(image));
-			image.size = sizeof(XI_IMG);
-
-            // image.bp = img_buffer;
-			image.bp = cv_mat_image.data;
-            image.bp_size = img_size_bytes;
-
-			CE(xiGetImage(xiH, 5000, &image)); // getting next image from the camera opened
-
-
-            cv::Mat shifted = cv_mat_image * (1 << 6);
-
-            long long current_ts = image.tsSec * 1000000 + image.tsUSec;
-            long long diff_us = current_ts - last_ts;
-            last_ts = current_ts;
-
-            float fps = 1e6/(diff_us);
-
-
-            // float temperature = 0.0;
-            // xiSetParamInt(xiH, XI_PRM_TEMP_SELECTOR, XI_TEMP_IMAGE_SENSOR_DIE_RAW); 
-            // xiGetParamFloat(xiH, XI_PRM_TEMP, &temperature); 
-            // printf("%f\n", temperature);
-
-
-            int number_of_skipped_frames = 0;
-            xiSetParamInt(xiH, XI_PRM_COUNTER_SELECTOR, XI_CNT_SEL_API_SKIPPED_FRAMES);
-            xiGetParamInt(xiH, XI_PRM_COUNTER_VALUE, &number_of_skipped_frames);
-	
-
-
-
-			unsigned char pixel = *(unsigned char*)image.bp;
-			printf("Image %d (%dx%d) received from camera. First pixel value: %d: ts: %d.%d, diff: %lld, fps: %f, exposure_us: %f ms, gain %f dB, skipped: %d\n", 
-            image_id, (int)image.width, (int)image.height, pixel, image.tsSec, image.tsUSec, diff_us, fps, image.exposure_time_us/1000.0, image.gain_db, number_of_skipped_frames);
-			if (image_id < 10)
-				continue; // wait for autoexposure stabilize
-			char filename[100] = "";
-			sprintf(filename, "/run/media/jakub/SandyBoy/wed/image%06d.tif", image_id);
-			
-
-
-            // cv::Mat rgb = cv::Mat(shifted.rows, shifted.cols, CV_16UC3);
-            // cv::cvtColor(shifted, rgb, cv::COLOR_BayerGBRG2BGR);
-
-            //cv::imwrite(filename, shifted);
-            // cv::imshow("view",rgb);
-            // char c = (char)cv::waitKey(1);
-            // if( c == 27 ) 
-            // break;
-
-            WriteImage(shifted, filename);
-            // for(int i = 0; i < img_size_bytes; i++){
-            //     printf("%d ", ((unsigned char*)image.bp)[i]);
-            // }
-        }
-
-		printf("Stopping acquisition...\n");
-		xiStopAcquisition(xiH);
-	}
-	catch (const char* err)
-	{
-		printf("Error: %s\n", err); 
-	}
-	xiCloseDevice(xiH);
-	printf("Done\n");
-	return 0;
-}
-*/
-
-// Ximea::Ximea(Ximea_config &config) : Device() {
-
-// }
-
 
 
 
