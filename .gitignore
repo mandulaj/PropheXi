@@ -10,11 +10,13 @@ compile_commands.json
 CTestTestfile.cmake
 _deps
 build
+.build
 .vscode
 _libs
 
 events
-
+output
+serialib
 prophexi
 
 *.raw
