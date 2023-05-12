@@ -17,53 +17,9 @@ set(CMAKE_CXX_FLAGS "-Wall -Wextra")
 set(CMAKE_CXX_FLAGS_DEBUG "-g")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 
-set (sample prophexi)
-set (common_libraries MetavisionSDK::driver MetavisionSDK::core Boost::program_options opencv_highgui)
-
-set(THREADS_PREFER_PTHREAD_FLAG ON)
-find_package(Threads REQUIRED)
-
-# Boost
-set (boost_components_to_find program_options filesystem timer chrono thread)
-find_package(Boost COMPONENTS ${boost_components_to_find} REQUIRED)
-
-find_package(MetavisionSDK COMPONENTS core driver ui REQUIRED)
-find_package(OpenCV COMPONENTS core highgui imgproc videoio imgcodecs calib3d objdetect REQUIRED)
-
 
 # Serial
-add_subdirectory(serialib/lib)
+# add_subdirectory(serialib/lib)
+# add_library(serialib STATIC serialib/lib/serialib.cpp)
 
-add_library(serialib STATIC serialib/lib/serialib.cpp)
-
-# Xiapi
-include_directories(_libs)
-include_directories(_libs/xiAPI)
-link_libraries(m3api)
-
-link_libraries(tiff)
-
-
-add_executable(${sample} ${sample}.cpp)
-target_link_libraries(${sample} PRIVATE ${common_libraries})
-target_link_libraries(${sample} serialib)
-
-
-set_target_properties(${sample} PROPERTIES RUNTIME_OUTPUT_DIRECTORY "../" )
-
-
-#install(TARGETS ${sample}
-#        RUNTIME DESTINATION bin
-#        COMPONENT metavision-sdk-driver-bin
-#)
-
-#install(FILES ${sample}.cpp
-#        DESTINATION share/metavision/sdk/driver/apps/${sample}
-#        COMPONENT metavision-sdk-driver-samples
-#)
-
-#install(FILES CMakeLists.txt.install
-#        RENAME CMakeLists.txt
-#        DESTINATION share/metavision/sdk/driver/apps/${sample}
-#        COMPONENT metavision-sdk-driver-samples
-#)
+add_subdirectory(src)
