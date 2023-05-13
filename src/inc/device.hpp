@@ -61,7 +61,7 @@ public:
         std::unique_lock<std::mutex> lock(mutex);
         stopped = true;
         condition.notify_one();
-        lock.release();
+        lock.unlock();
 
         if (thread.joinable()) {
             thread.join();
