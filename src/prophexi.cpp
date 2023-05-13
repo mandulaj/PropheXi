@@ -24,6 +24,7 @@
 #include <fstream>
 #include <sys/stat.h>
 
+#include <cstdio>
 #include <thread>
 #include <atomic>
 #include <chrono>
@@ -162,11 +163,7 @@ int main(int argc, char *argv[]) {
     Prophesee proph_L_cam(proph_L_config);
 
 
-    XimeaTest xi1(xi_config);
-    XimeaTest xi2(xi_config);
-    
-    // xi1.start();
-    // xi2.start();
+
     xi_cam.start();
     proph_R_cam.start();
     std::this_thread::sleep_for(std::chrono::milliseconds(1000)); // Give Master time to turn on
@@ -181,8 +178,13 @@ int main(int argc, char *argv[]) {
         if (input == "") {
             if (!recording) {
                 fs::path new_path = prepare_new_directory(output_dir);
-                // xi1.start_recording(new_path);
-                // xi2.start_recording(new_path);
+
+                char message[2048];
+                std::snprintf(message, sizeof(message), "arecord -f S32_LE -c 1 -r 44100 -t wav -d 0 -q %s/recording.wav &", new_path.c_str());
+                printf("Starting %s\n", message);
+
+                std::system(message);
+
                 proph_R_cam.start_recording(new_path);
                 proph_L_cam.start_recording(new_path);
                 
@@ -192,14 +194,16 @@ int main(int argc, char *argv[]) {
                 std::cout << "Recording started." << std::endl;
                 recording = true;
             } else {
-                // xi1.stop_recording();
-                // xi2.stop_recording();
+
                 xi_cam.stop_recording();
 
                 std::this_thread::sleep_for(std::chrono::milliseconds(100));
                 
                 proph_R_cam.stop_recording();
-                proph_L_cam.stop_recording();  
+                proph_L_cam.stop_recording();
+
+                std::system("pkill -f arecord");
+
                 std::cout << "Stopped recording." << std::endl;
                 recording = false;
             }

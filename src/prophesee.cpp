@@ -167,9 +167,6 @@ void Prophesee::prepare_recording(fs::path path){
 
 void Prophesee::run(){
 
-    std::cout << "Run " << std::this_thread::get_id() << std::endl;
-
-
     // Get the geometry of the camera
     auto &geometry = camera.geometry(); // Get the geometry of the camera
 
@@ -227,39 +224,27 @@ void Prophesee::run(){
 
 
 
-
-    printf("Starting Prophesee camera\n");
+		
     // Start the camera streaming
     camera.start();
+
+    printf("Prophesee %s - %s ready\n", config.master? "Master" : "Slave", config.serial.c_str());
 
 
     while(camera.is_running()){
 		
 		// Wait here for recording to start
 		std::unique_lock<std::mutex> lock(mutex);
-		if(stopped){
-            camera.stop();
-			break;
-		}
 
 		condition.wait(lock);
+		if(stopped){
+			break;
+		}
 		lock.unlock();
 
         
-        if(config.master)
-            printf("Starting Prophesee master acquisition...\n");
-        else
-            printf("Starting Prophesee slave acquisition...\n");
-
-		
 
         camera.start_recording(destination_path.string());
-
-
-
-        
-
-		// std::cout << "Thread " << std::this_thread::get_id() << " starting aquisition" << std::endl;
 
 		// Frame aquisition 
 		while(true){
@@ -291,6 +276,9 @@ void Prophesee::run(){
 		}
 
 	}
+
+    camera.stop();
+
 }
 
 
@@ -298,70 +286,55 @@ void Prophesee::init(){
     bool camera_is_opened = false;
     bool do_retry = false;
 
-
-    // do {
-
         
-        try {
-            if (!config.serial.empty()) {
-                camera = Metavision::Camera::from_serial(config.serial);
-            } else {
-                camera = Metavision::Camera::from_first_available();
-            }
-
-            if (config.biases_file != "") {
-                camera.biases().set_from_file(config.biases_file);
-            }
-
-            if (!config.roi.empty()) {
-                camera.roi().set({
-                    config.roi[0], 
-                    config.roi[1], 
-                    config.roi[2], 
-                    config.roi[3]});
-            }
-
-            Metavision::I_TriggerIn *i_trigger_in = camera.get_device().get_facility<Metavision::I_TriggerIn>();
-            // Metavision::I_DeviceControl *i_dev_ctrl = camera.get_device().get_facility<Metavision::I_DeviceControl>();
-            Metavision::I_CameraSynchronization *i_cam_sync = camera.get_device().get_facility<Metavision::I_CameraSynchronization>();
-
-            if(i_trigger_in && i_cam_sync){
-                if(config.master){
-                    i_cam_sync->set_mode_master();
-                } else {
-                    i_cam_sync->set_mode_slave();
-                }
-
-                i_trigger_in->enable(Metavision::I_TriggerIn::Channel::Main);
-                std::cout << "Trigger Enabled: " << i_trigger_in->is_enabled(Metavision::I_TriggerIn::Channel::Main) << std::endl;
-            }
-
-            camera_is_opened = true;
-        } catch (Metavision::CameraException &e) { MV_LOG_ERROR() << e.what(); }
-        
-
-        if (!camera_is_opened) {
-            if (do_retry) {
-                std::this_thread::sleep_for(std::chrono::seconds(1));
-                MV_LOG_INFO() << "Trying to reopen camera...";
-                // continue;
-            } else {
-                return;
-            }
+    try {
+        if (!config.serial.empty()) {
+            camera = Metavision::Camera::from_serial(config.serial);
         } else {
-            MV_LOG_INFO() << "Camera has been opened successfully.";
+            camera = Metavision::Camera::from_first_available();
         }
-   
 
-        // Add runtime error callback
-        camera.add_runtime_error_callback([&do_retry](const Metavision::CameraException &e) {
-            MV_LOG_ERROR() << e.what();
-            do_retry = true;
-        });
+        if (config.biases_file != "") {
+            camera.biases().set_from_file(config.biases_file);
+        }
+
+        if (!config.roi.empty()) {
+            camera.roi().set({
+                config.roi[0], 
+                config.roi[1], 
+                config.roi[2], 
+                config.roi[3]});
+        }
+
+        Metavision::I_TriggerIn *i_trigger_in = camera.get_device().get_facility<Metavision::I_TriggerIn>();
+        Metavision::I_CameraSynchronization *i_cam_sync = camera.get_device().get_facility<Metavision::I_CameraSynchronization>();
+
+        if(i_trigger_in && i_cam_sync){
+            if(config.master){
+                i_cam_sync->set_mode_master();
+            } else {
+                i_cam_sync->set_mode_slave();
+            }
+
+            i_trigger_in->enable(Metavision::I_TriggerIn::Channel::Main);
+            if(i_trigger_in->is_enabled(Metavision::I_TriggerIn::Channel::Main) != 1){
+                throw "Trigger not enabled";
+            }
+        }
+
+        camera_is_opened = true;
+    } catch (Metavision::CameraException &e) { MV_LOG_ERROR() << e.what(); }
+    
+
+    if (!camera_is_opened) {
+        std::cerr << "Opening camera failed." << std::endl;
+        
+    }
 
 
-    // } while (!signal_caught && do_retry);
-
-
-
+    // Add runtime error callback
+    camera.add_runtime_error_callback([&do_retry](const Metavision::CameraException &e) {
+        MV_LOG_ERROR() << e.what();
+        do_retry = true;
+    });
 }

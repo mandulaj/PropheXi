@@ -92,53 +92,6 @@ void WriteImage(cv::Mat& image, const char* filename)
 
 
 
-void XimeaTest::init(){
-	std::cout << "Init" << std::endl;
-}
-
-
-void XimeaTest::prepare_recording(fs::path path){
-}
-
-
-void XimeaTest::run(){
-	std::cout << "Init Run" << std::endl;
-
-    while(true){
-		
-		// Wait here for recording to start
-		std::unique_lock<std::mutex> lock(mutex);
-		if(stopped){
-			break;
-		}
-
-		condition.wait(lock);
-
-
-		lock.unlock();
-		
-		std::cout << "Thread " << std::this_thread::get_id() << " starting aquisition" << std::endl;
-
-		// Frame aquisition 
-		int frame = 0;
-		while(true){
-			std::cout << "Thread " << std::this_thread::get_id() << " taking frame" << frame << std::endl;
-			std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-			frame++;
-
-			{
-				std::lock_guard<std::mutex> lock(mutex);
-
-				if(stopped || paused){
-					// Stop Aquisition
-					break;
-				}
-			}
-		}
-
-	}
-}
-
 
 
 void Ximea::prepare_recording(fs::path path){
@@ -175,20 +128,19 @@ void Ximea::run(){
 	xiGetParamInt(xiH, XI_PRM_HEIGHT, &height);
 
 
-	printf("Image: %dx%dx3 = %d size = %d\n", width, height, width*height*2, img_size_bytes );
-
 	cv::Mat cv_mat_image = cv::Mat(height,width,CV_16UC1);
 	
+
+	std::cout << "Ximea ready" << std::endl;
 	while(true){
 
 
 		// Wait here for recording to resume
 		std::unique_lock<std::mutex> lock(mutex);
+		condition.wait(lock);
 		if(stopped){
 			break;
 		}
-
-		condition.wait(lock);
 		lock.unlock();
 
 		std::ofstream ts_file(timestamps_file.string());
@@ -199,7 +151,6 @@ void Ximea::run(){
 				<< "skip_frames"				
 				<< std::endl;
 
-		printf("Starting Ximea acquisition...\n");
 		CE(xiStartAcquisition(xiH));
 		
 		long long last_ts = 0;
@@ -294,6 +245,9 @@ void Ximea::run(){
 			frame_id++;
 		}
 	}
+
+	xiCloseDevice(xiH);
+
 }
 
 
@@ -301,12 +255,10 @@ void Ximea::run(){
 void Ximea::init() {
 
 	try {
-		printf("Opening first camera...\n");
 		CE(xiOpenDevice(0, &xiH));
 
 		xiSetParamInt(xiH, XI_PRM_DEBUG_LEVEL, XI_DL_WARNING);
 		xiSetParamInt(xiH, XI_PRM_DEBUG_LEVEL, XI_DL_DISABLED);
-		printf("Setting exposure time to 10ms...\n");
 		
 		// Target Exposure Level
 		CE(xiSetParamInt(xiH, XI_PRM_AEAG_LEVEL, config.aeag_level));
