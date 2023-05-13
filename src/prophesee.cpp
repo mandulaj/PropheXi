@@ -332,6 +332,11 @@ void Prophesee::init(){
     }
 
 
+
+    camera.erc_module().enable(config.erc);
+    camera.erc_module().set_cd_event_rate(config.erc_rate);
+
+
     // Add runtime error callback
     camera.add_runtime_error_callback([&do_retry](const Metavision::CameraException &e) {
         MV_LOG_ERROR() << e.what();

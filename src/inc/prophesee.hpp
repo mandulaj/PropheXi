@@ -36,6 +36,8 @@ struct Prophesee_config{
     std::string biases_file;
     std::vector<uint16_t> roi;
     bool master;
+    bool erc;
+    uint32_t erc_rate;
 };
 
 

@@ -107,6 +107,9 @@ int main(int argc, char *argv[]) {
         ("roi_right",        po::value<std::vector<uint16_t>>(&proph_R_config.roi)->multitoken(), "Right Hardware ROI to set on the sensor in the format [x y width height].")
         ("roi_left",         po::value<std::vector<uint16_t>>(&proph_L_config.roi)->multitoken(), "Left Hardware ROI to set on the sensor in the format [x y width height].")
         
+
+
+        
         ("output_dir,o",    po::value<std::string>(&output_dir)->default_value("output"), "Output Destination directory")
         
         ("lenses,l",          po::value<std::string>(&note)->default_value("config/lenses.json"), "File containing inforamtion on the lenses")
@@ -125,9 +128,16 @@ int main(int argc, char *argv[]) {
         // ("biases,b",         po::value<std::string>(&proph_R_config.biases_file), "Path to a biases file. If not specified, the camera will be configured with the default biases.")
         // ("raw-out,o", po::value<std::string>(&config_data.out_raw_file_path)->default_value("events"), "Folder to output RAW file used for data recording. Default value is 'events'.")
         // ("imu-out,m", po::value<std::string>(&out_imu_file_path)->default_value("imu"), "Folder to output IMU file used for data recording. Default value is 'imu'.")
+        ("erc",              po::bool_switch(&proph_L_config.erc)->default_value(true), "ERC on prophesee cameras")
+        ("erc_rate",         po::value<uint32_t>(&proph_L_config.erc_rate)->default_value(100), "ERC Rate Mev/s")
     ;
     // clang-format on
 
+    // ERC is the same for both cameras
+    proph_R_config.erc = proph_L_config.erc;
+    proph_L_config.erc_rate *= 1000000;
+    proph_R_config.erc_rate = proph_L_config.erc_rate;
+    
     po::variables_map vm;
     try {
         po::store(po::command_line_parser(argc, argv).options(options_desc).run(), vm);
@@ -165,9 +175,9 @@ int main(int argc, char *argv[]) {
 
 
     xi_cam.start();
-    proph_R_cam.start();
-    std::this_thread::sleep_for(std::chrono::milliseconds(1000)); // Give Master time to turn on
     proph_L_cam.start();
+    std::this_thread::sleep_for(std::chrono::milliseconds(1000)); // Give Master time to turn on
+    proph_R_cam.start();
 
 
     bool recording = false;
@@ -181,12 +191,15 @@ int main(int argc, char *argv[]) {
 
                 char message[2048];
                 std::snprintf(message, sizeof(message), "arecord -f S32_LE -c 1 -r 44100 -t wav -d 0 -q %s/recording.wav &", new_path.c_str());
+                std::system(message);
+                
+                
+                
                 printf("Starting %s\n", message);
 
-                std::system(message);
 
-                proph_R_cam.start_recording(new_path);
                 proph_L_cam.start_recording(new_path);
+                proph_R_cam.start_recording(new_path);
                 
                 std::this_thread::sleep_for(std::chrono::milliseconds(100));
        
