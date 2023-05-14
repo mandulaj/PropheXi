@@ -204,8 +204,11 @@ void Ximea::run(){
 					<<std::endl;
 
 			// unsigned char pixel = *(unsigned char*)image.bp;
-			printf("\Frame %d - ts: %d.%d fps: %f, exposure_us: %f ms, gain %f dB, skipped: %d\n", 
-            frame_id, image.tsSec, image.tsUSec, fps, image.exposure_time_us/1000.0, image.gain_db, number_of_skipped_frames);
+			if(frame_id % 64 == 0){
+				printf("\rFrame %d - ts: %d.%ds fps: %f, exposure_us: %f ms, gain %f dB, skipped: %d", 
+            	frame_id, image.tsSec, image.tsUSec, fps, image.exposure_time_us/1000.0, image.gain_db, number_of_skipped_frames);
+				fflush(stdout);
+			}
 			
 			
 
