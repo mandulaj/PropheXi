@@ -20,6 +20,7 @@
 #include <mutex>
 #include <condition_variable>
 #include <atomic>
+#include <opencv2/core.hpp> 
 
 
 #include <boost/filesystem.hpp>
@@ -68,6 +69,12 @@ public:
         }
     }
 
+
+    cv::Mat get_output_frame() {
+        std::lock_guard<std::mutex> lock(frame_mutex);
+        return out_frame.clone();
+    }
+
 protected:
     std::thread thread;
     std::mutex mutex;
@@ -75,6 +82,7 @@ protected:
     std::atomic_bool paused;
     std::atomic_bool stopped;
 
+    cv::Mat out_frame;
     std::mutex frame_mutex;
 
     std::string path_root;
@@ -84,6 +92,9 @@ protected:
     std::string file_ext;
 
     fs::path destination_path;
+
+
+    
 
 
     virtual void init() = 0;

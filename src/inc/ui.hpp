@@ -13,3 +13,52 @@
 
 
 #pragma once
+
+
+#include <iostream>
+#include <thread>
+#include <mutex>
+#include <condition_variable>
+#include <atomic>
+#include <opencv2/core.hpp> 
+
+#include "device.hpp"
+
+
+
+class UI {
+
+public:
+    UI(std::vector<Device*>& cameras) : stopped(false), cameras(cameras){}
+    
+    ~UI() {
+        stop();
+    }
+
+    void start() {
+        thread = std::thread(&UI::run, this);
+    }
+
+   
+    void stop() {
+        std::unique_lock<std::mutex> lock(mutex);
+        stopped = true;
+        lock.unlock();
+
+        if (thread.joinable()) {
+            thread.join();
+        }
+    }
+
+
+private:
+    std::thread thread;
+    std::mutex mutex;
+    std::atomic_bool stopped;
+;
+    std::vector<Device*>& cameras;
+
+
+    void run();
+
+};

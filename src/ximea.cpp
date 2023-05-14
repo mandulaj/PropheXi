@@ -129,6 +129,7 @@ void Ximea::run(){
 
 
 	cv::Mat cv_mat_image = cv::Mat(height,width,CV_16UC1);
+	cv::Mat rgb_image = cv::Mat(height, width, CV_16UC3);
 	
 
 	std::cout << "Ximea ready" << std::endl;
@@ -151,6 +152,8 @@ void Ximea::run(){
 				<< "skip_frames"				
 				<< std::endl;
 
+
+		
 		CE(xiStartAcquisition(xiH));
 		
 		long long last_ts = 0;
@@ -201,8 +204,9 @@ void Ximea::run(){
 					<<std::endl;
 
 			// unsigned char pixel = *(unsigned char*)image.bp;
-			// printf("Image %d (%dx%d) received from camera. First pixel value: %d: ts: %d.%d, diff: %lld, fps: %f, exposure_us: %f ms, gain %f dB, skipped: %d\n", 
-            // frame_id, (int)image.width, (int)image.height, pixel, image.tsSec, image.tsUSec, diff_us, fps, image.exposure_time_us/1000.0, image.gain_db, number_of_skipped_frames);
+			printf("\Frame %d - ts: %d.%d fps: %f, exposure_us: %f ms, gain %f dB, skipped: %d\n", 
+            frame_id, image.tsSec, image.tsUSec, fps, image.exposure_time_us/1000.0, image.gain_db, number_of_skipped_frames);
+			
 			
 
             // cv::Mat rgb = cv::Mat(shifted.rows, shifted.cols, CV_16UC3);
@@ -227,6 +231,10 @@ void Ximea::run(){
 			WriteImage(shifted, c_img_path);
 
 
+			{
+				std::lock_guard<std::mutex> lock(frame_mutex);
+				out_frame = shifted.clone();
+			}
 
 
 			// Check if recording interrupted
@@ -280,7 +288,8 @@ void Ximea::init() {
 	
 		// GPIO Setup 
 		CE(xiSetParamInt(xiH, XI_PRM_GPO_SELECTOR, 1));
-		CE(xiSetParamInt(xiH, XI_PRM_GPO_MODE,  XI_GPO_EXPOSURE_ACTIVE_NEG));
+		// CE(xiSetParamInt(xiH, XI_PRM_GPO_MODE,  XI_GPO_OFF));
+		CE(xiSetParamInt(xiH, XI_PRM_GPO_MODE,  XI_GPO_EXPOSURE_ACTIVE));
 
 
 	}

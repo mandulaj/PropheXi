@@ -122,7 +122,7 @@ int main(int argc, char *argv[]) {
         ("fps",             po::value<int>(&xi_config.fps)->default_value(60), "Ximea Framerate [Hz]")
         ("ae_max_lim",      po::value<int>(&xi_config.ae_max_lim)->default_value(16000), "Ximea Max Exposure Time Limit [us]")
         ("ag_max_lim",             po::value<float>(&xi_config.ag_max_lim)->default_value(5.5), "Ximea Max Gain [dB]")
-        ("level",             po::value<int>(&xi_config.aeag_level)->default_value(25), "Ximea Target Level [%]")
+        ("level",             po::value<int>(&xi_config.aeag_level)->default_value(30), "Ximea Target Level [%]")
         ("exp_pri",             po::value<float>(&xi_config.exp_priority)->default_value(0.8), "Ximea Exposure Priority 0-1.0")
         // ("imu_serial,i",          po::value<std::string>(&config_data.imu_serial),"IMU Serial device (/dev/ttyUSB0), otherwise one is picked automatically.")
         // ("biases,b",         po::value<std::string>(&proph_R_config.biases_file), "Path to a biases file. If not specified, the camera will be configured with the default biases.")
@@ -133,10 +133,7 @@ int main(int argc, char *argv[]) {
     ;
     // clang-format on
 
-    // ERC is the same for both cameras
-    proph_R_config.erc = proph_L_config.erc;
-    proph_L_config.erc_rate *= 1000000;
-    proph_R_config.erc_rate = proph_L_config.erc_rate;
+
     
     po::variables_map vm;
     try {
@@ -156,6 +153,12 @@ int main(int argc, char *argv[]) {
     }
 
 
+    // ERC is the same for both cameras
+    proph_R_config.erc = proph_L_config.erc;
+    proph_L_config.erc_rate *= 1000000;
+    proph_R_config.erc_rate = proph_L_config.erc_rate;
+
+
     MV_LOG_INFO() << short_program_desc;
 
     if (vm.count("roi")) {
@@ -173,12 +176,18 @@ int main(int argc, char *argv[]) {
     Prophesee proph_L_cam(proph_L_config);
 
 
+    std::vector<Device*> cameras = {&xi_cam, &proph_L_cam, &proph_R_cam};
+
 
     xi_cam.start();
     proph_L_cam.start();
     std::this_thread::sleep_for(std::chrono::milliseconds(1000)); // Give Master time to turn on
     proph_R_cam.start();
 
+
+    UI ui(cameras);
+
+    ui.start();
 
     bool recording = false;
 
@@ -194,9 +203,6 @@ int main(int argc, char *argv[]) {
                 std::system(message);
                 
                 
-                
-                printf("Starting %s\n", message);
-
 
                 proph_L_cam.start_recording(new_path);
                 proph_R_cam.start_recording(new_path);
@@ -204,7 +210,7 @@ int main(int argc, char *argv[]) {
                 std::this_thread::sleep_for(std::chrono::milliseconds(100));
        
                 xi_cam.start_recording(new_path);
-                std::cout << "Recording started." << std::endl;
+                std::cout << "Recording started in " << new_path.string() << std::endl;
                 recording = true;
             } else {
 
@@ -222,6 +228,8 @@ int main(int argc, char *argv[]) {
             }
         } else if (input == "q" || input == "quit"){
             std::cout << "Quitting" << std::endl;
+
+            ui.stop();
 
             xi_cam.stop();
             proph_R_cam.stop();

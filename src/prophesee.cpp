@@ -250,8 +250,9 @@ void Prophesee::run(){
 		while(true){
 			
             if (!cd_frame.empty()) {
+                    std::unique_lock<std::mutex> lock(cd_frame_mutex);
                     std::string text;
-    
+
                     text = human_readable_time(cd_frame_ts);
                     
                     text += "     ";
@@ -259,6 +260,12 @@ void Prophesee::run(){
                     cv::putText(cd_frame, text, cv::Point(10, 20), cv::FONT_HERSHEY_PLAIN, 1, cv::Scalar(108, 143, 255), 1,
                                 cv::LINE_AA);
                     // cv::imshow(cd_window_name, cd_frame);
+
+                    {
+                        std::lock_guard<std::mutex> lock(frame_mutex);
+                        out_frame = cd_frame.clone();
+                    }
+
             }
 
             std::this_thread::sleep_for(std::chrono::milliseconds(1));
