@@ -56,16 +56,19 @@ namespace fs = boost::filesystem;
 
 
 
-fs::path prepare_new_directory(const std::string &output_dir){
+fs::path prepare_new_directory(const std::string &output_dir, const std::string &note){
 
     time_t     now = time(0);
     struct tm  tstruct;
 
     tstruct = *localtime(&now);
 
-    char file_name[256];
+    char file_name_time[256];
 
-    strftime(file_name, 255, "%Y_%m_%d_%H%M%S", &tstruct);
+    strftime(file_name_time, 255, "%Y_%m_%d_%H%M%S", &tstruct);
+
+    char file_name[256];
+    snprintf(file_name, 255, "%s_%s", file_name_time, note.c_str());
 
      
     fs::path dir (output_dir);
@@ -194,9 +197,28 @@ int main(int argc, char *argv[]) {
     while (true) {
         std::string input;
         std::getline(std::cin, input);
-        if (input == "") {
+        if (input == "q" || input == "quit"){
+            std::cout << "Quitting" << std::endl;
+
+            ui.stop();
+
+            xi_cam.stop();
+            proph_R_cam.stop();
+            proph_L_cam.stop(); 
+            return 0;
+        } else {
             if (!recording) {
-                fs::path new_path = prepare_new_directory(output_dir);
+
+                std::string note;
+
+                if(input != ""){
+                    note = input;
+                    std::replace(note.begin(), note.end(), ' ', '_');
+                } else {
+                    note = "recording";
+                }
+
+                fs::path new_path = prepare_new_directory(output_dir, note);
 
                 char message[2048];
                 std::snprintf(message, sizeof(message), "arecord -f S32_LE -c 1 -r 44100 -t wav -d 0 -q %s/recording.wav &", new_path.c_str());
@@ -226,15 +248,6 @@ int main(int argc, char *argv[]) {
                 std::cout << "Stopped recording." << std::endl;
                 recording = false;
             }
-        } else if (input == "q" || input == "quit"){
-            std::cout << "Quitting" << std::endl;
-
-            ui.stop();
-
-            xi_cam.stop();
-            proph_R_cam.stop();
-            proph_L_cam.stop(); 
-            return 0;
         }
     }
     

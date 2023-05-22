@@ -153,8 +153,12 @@ void Ximea::run(){
 				<< std::endl;
 
 
-		
-		CE(xiStartAcquisition(xiH));
+		try{
+			xiStartAcquisition(xiH);
+		} catch(const char* err ) {
+			std::cerr << err << std::endl;
+			throw err;
+		}
 		
 		long long last_ts = 0;
 
@@ -297,7 +301,8 @@ void Ximea::init() {
 
 	}
 	catch (const char* err) {
-		printf("Error: %s\n", err); 
+		printf("Error: %s\n", err);
+		throw err;
 	}
 
 } 

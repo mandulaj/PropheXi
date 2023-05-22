@@ -21,7 +21,7 @@ set (boost_components_to_find program_options filesystem timer chrono thread)
 find_package(Boost COMPONENTS ${boost_components_to_find} REQUIRED)
 
 find_package(MetavisionSDK COMPONENTS core driver ui REQUIRED)
-find_package(OpenCV COMPONENTS core highgui imgproc videoio imgcodecs calib3d objdetect REQUIRED)
+find_package(OpenCV 4.7.0 COMPONENTS core highgui imgproc videoio imgcodecs calib3d objdetect REQUIRED)
 
 
 
