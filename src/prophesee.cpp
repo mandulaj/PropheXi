@@ -181,7 +181,7 @@ void Prophesee::run(){
 
     // Setup CD frame generator
     Metavision::CDFrameGenerator cd_frame_generator(geometry.width(), geometry.height());
-    cd_frame_generator.set_display_accumulation_time_us(10000);
+    cd_frame_generator.set_display_accumulation_time_us(100000);
 
     std::mutex cd_frame_mutex;
     cv::Mat cd_frame;

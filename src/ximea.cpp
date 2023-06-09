@@ -282,8 +282,13 @@ void Ximea::init() {
 		CE(xiSetParamFloat(xiH, XI_PRM_AG_MAX_LIMIT, config.ag_max_lim));
 		CE(xiSetParamFloat(xiH, XI_PRM_EXP_PRIORITY, config.exp_priority));
 		CE(xiSetParamInt(xiH, XI_PRM_EXPOSURE, config.ae_max_lim));
-		CE(xiSetParamInt(xiH, XI_PRM_AEAG, XI_ON));
-		
+		CE(xiSetParamInt(xiH, XI_PRM_GAIN, config.ag_max_lim));
+
+		if(config.ae_enabled){
+			CE(xiSetParamInt(xiH, XI_PRM_AEAG, XI_ON));
+		} else {
+			CE(xiSetParamInt(xiH, XI_PRM_AEAG, XI_OFF));	
+		}
 
 		CE(xiSetParamInt(xiH,XI_PRM_BUFFER_POLICY,XI_BP_SAFE));
 		CE(xiSetParamInt(xiH, XI_PRM_ACQ_TIMING_MODE, XI_ACQ_TIMING_MODE_FRAME_RATE));

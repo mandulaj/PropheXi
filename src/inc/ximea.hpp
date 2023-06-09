@@ -36,6 +36,7 @@ struct Ximea_config{
     int fps;
     float exp_priority;
     float ag_max_lim;
+    bool ae_enabled;
 
 };
 

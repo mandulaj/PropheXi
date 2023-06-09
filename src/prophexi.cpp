@@ -89,6 +89,7 @@ int main(int argc, char *argv[]) {
     Prophesee_config proph_L_config;
 
     bool run_gui;
+    bool manual_ae;
     std::string output_dir;
     std::string note;
 
@@ -123,7 +124,8 @@ int main(int argc, char *argv[]) {
 
         // Ximea camera
         ("fps",             po::value<int>(&xi_config.fps)->default_value(60), "Ximea Framerate [Hz]")
-        ("ae_max_lim",      po::value<int>(&xi_config.ae_max_lim)->default_value(16000), "Ximea Max Exposure Time Limit [us]")
+        ("ae_manual",        po::bool_switch(&manual_ae)->default_value(false), "Used Manual Exposure and Gain values")
+	("ae_max_lim",      po::value<int>(&xi_config.ae_max_lim)->default_value(16000), "Ximea Max Exposure Time Limit [us]")
         ("ag_max_lim",             po::value<float>(&xi_config.ag_max_lim)->default_value(5.5), "Ximea Max Gain [dB]")
         ("level",             po::value<int>(&xi_config.aeag_level)->default_value(30), "Ximea Target Level [%]")
         ("exp_pri",             po::value<float>(&xi_config.exp_priority)->default_value(0.8), "Ximea Exposure Priority 0-1.0")
@@ -160,6 +162,7 @@ int main(int argc, char *argv[]) {
     proph_R_config.erc = proph_L_config.erc;
     proph_L_config.erc_rate *= 1000000;
     proph_R_config.erc_rate = proph_L_config.erc_rate;
+    xi_config.ae_enabled = !manual_ae;
 
 
     MV_LOG_INFO() << short_program_desc;
