@@ -24,12 +24,19 @@
 #include <metavision/sdk/driver/camera.h>
 #include <metavision/hal/facilities/i_trigger_in.h>
 #include <metavision/hal/facilities/i_camera_synchronization.h>
+#include <metavision/hal/facilities/i_event_rate_activity_filter_module.h>
+#include <metavision/hal/facilities/i_digital_event_mask.h>
+#include <yaml-cpp/yaml.h>
 
 
 #include <boost/filesystem.hpp>
 
 namespace fs = boost::filesystem;
 
+struct PixelCoordinates{
+    uint16_t x;
+    uint16_t y;
+};
 
 struct Prophesee_config{
     std::string serial;
@@ -38,8 +45,8 @@ struct Prophesee_config{
     bool master;
     bool erc;
     uint32_t erc_rate;
+    std::vector<PixelCoordinates> crazy_pixels;
 };
-
 
 
 
@@ -62,3 +69,4 @@ private:
 };
 
 
+void set_prophesee_config(Prophesee_config &config, const YAML::Node &node);

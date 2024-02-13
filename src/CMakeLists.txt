@@ -24,6 +24,20 @@ find_package(MetavisionSDK COMPONENTS core driver ui REQUIRED)
 find_package(OpenCV 4.8.0 COMPONENTS core highgui imgproc videoio imgcodecs calib3d objdetect REQUIRED)
 
 
+include(FetchContent)
+
+FetchContent_Declare(
+  yaml-cpp
+  GIT_REPOSITORY https://github.com/jbeder/yaml-cpp.git
+  GIT_TAG master # Can be a tag (yaml-cpp-x.x.x), a commit hash, or a branch name (master)
+)
+FetchContent_GetProperties(yaml-cpp)
+
+if(NOT yaml-cpp_POPULATED)
+  message(STATUS "Fetching yaml-cpp...")
+  FetchContent_Populate(yaml-cpp)
+  add_subdirectory(${yaml-cpp_SOURCE_DIR} ${yaml-cpp_BINARY_DIR})
+endif()
 
 
 # Xiapi
@@ -45,6 +59,7 @@ add_executable(${sample}
   ${sample}.cpp
   )
 target_link_libraries(${sample} PRIVATE ${common_libraries})
+target_link_libraries(${sample} PUBLIC yaml-cpp::yaml-cpp) # The library or executable that require yaml-cpp library
 # target_link_libraries(${sample} serialib)
 
 

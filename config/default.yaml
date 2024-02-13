@@ -1,0 +1,25 @@
+ev_right:
+  serial: 00050963
+  master: true
+  event: true
+  crazy_pixels:
+  lense: 15
+ev_left:
+  serial: 00050964
+  master: false
+  event: true
+  crazy_pixels:
+  - 877 16
+  - 944 524
+  lense: 25
+ximea:
+  event: false
+  lense: 25
+  fps: 30
+  ae_manual: false
+  ae_max_lim: 16000
+  ae_min_lim: 5.5
+  level: 30
+  exp_pri: 0.8
+
+

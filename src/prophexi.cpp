@@ -34,6 +34,7 @@
 #include <opencv2/core.hpp> 
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgcodecs.hpp>
+#include <yaml-cpp/yaml.h>
 
 #if CV_MAJOR_VERSION >= 4
 #include <opencv2/highgui/highgui_c.h>
@@ -81,6 +82,34 @@ fs::path prepare_new_directory(const std::string &output_dir, const std::string 
 
 
 
+void load_prophexi_config_file(std::string config_yaml_file, Ximea_config &xi_config, Prophesee_config &proph_R_config, Prophesee_config &proph_L_config){
+    std::ifstream yaml_fstream(config_yaml_file);
+    YAML::Node config = YAML::Load(yaml_fstream);
+
+    if (config["ximea"]) {
+        if (config["ximea"]["fps"])
+            xi_config.fps = config["ximea"]["fps"].as<int>();
+        if (config["ximea"]["ae_max_lim"])
+            xi_config.ae_max_lim = config["ximea"]["ae_max_lim"].as<int>();
+        if (config["ximea"]["ag_max_lim"])
+            xi_config.ag_max_lim = config["ximea"]["ag_max_lim"].as<float>();
+        if (config["ximea"]["aeag_level"])
+            xi_config.aeag_level = config["ximea"]["aeag_level"].as<int>();
+        if (config["ximea"]["exp_priority"])    
+            xi_config.exp_priority = config["ximea"]["exp_priority"].as<float>();
+        if (config["ximea"]["ae_manual"])
+            xi_config.ae_enabled = !config["ximea"]["ae_manual"].as<bool>();
+    }
+
+    if (config["ev_right"])
+        set_prophesee_config( proph_R_config, config["ev_right"]);
+
+    if (config["ev_left"])
+        set_prophesee_config( proph_L_config, config["ev_left"]);
+
+}
+
+
 
 int main(int argc, char *argv[]) {
 
@@ -92,6 +121,7 @@ int main(int argc, char *argv[]) {
     bool manual_ae;
     std::string output_dir;
     std::string note;
+    std::string config_yaml_file;
 
     const std::string short_program_desc(
         "Simple Synchronour recorder of IMU and Event Camera.\n");
@@ -102,8 +132,8 @@ int main(int argc, char *argv[]) {
         ("help,h", "Produce help message.")
 
         // Prophesee Camera
-        ("serial_right",     po::value<std::string>(&proph_R_config.serial)->default_value("00050338"),"Serial ID of the Right camera.")
-        ("serial_left",      po::value<std::string>(&proph_L_config.serial)->default_value("00050339"),"Serial ID of the Left camera.")
+        ("serial_right",     po::value<std::string>(&proph_R_config.serial)->default_value("00050963"),"Serial ID of the Right camera.")
+        ("serial_left",      po::value<std::string>(&proph_L_config.serial)->default_value("00050964"),"Serial ID of the Left camera.")
         ("master_right",     po::bool_switch(&proph_R_config.master)->default_value(true), "Right camera master")
         ("master_left",      po::bool_switch(&proph_L_config.master)->default_value(false), "Left camera master")
         ("biases_right",     po::value<std::string>(&proph_R_config.biases_file), "Path to a biases file for Right camera.")
@@ -111,8 +141,7 @@ int main(int argc, char *argv[]) {
         ("roi_right",        po::value<std::vector<uint16_t>>(&proph_R_config.roi)->multitoken(), "Right Hardware ROI to set on the sensor in the format [x y width height].")
         ("roi_left",         po::value<std::vector<uint16_t>>(&proph_L_config.roi)->multitoken(), "Left Hardware ROI to set on the sensor in the format [x y width height].")
         
-
-
+        ("config",     po::value<std::string>(&config_yaml_file)->default_value("config/default.yaml"),"Serial ID of the Right camera.")
         
         ("output_dir,o",    po::value<std::string>(&output_dir)->default_value("output"), "Output Destination directory")
         
@@ -125,7 +154,7 @@ int main(int argc, char *argv[]) {
         // Ximea camera
         ("fps",             po::value<int>(&xi_config.fps)->default_value(60), "Ximea Framerate [Hz]")
         ("ae_manual",        po::bool_switch(&manual_ae)->default_value(false), "Used Manual Exposure and Gain values")
-	("ae_max_lim",      po::value<int>(&xi_config.ae_max_lim)->default_value(16000), "Ximea Max Exposure Time Limit [us]")
+	    ("ae_max_lim",      po::value<int>(&xi_config.ae_max_lim)->default_value(16000), "Ximea Max Exposure Time Limit [us]")
         ("ag_max_lim",             po::value<float>(&xi_config.ag_max_lim)->default_value(5.5), "Ximea Max Gain [dB]")
         ("level",             po::value<int>(&xi_config.aeag_level)->default_value(30), "Ximea Target Level [%]")
         ("exp_pri",             po::value<float>(&xi_config.exp_priority)->default_value(0.8), "Ximea Exposure Priority 0-1.0")
@@ -157,7 +186,16 @@ int main(int argc, char *argv[]) {
         return 0;
     }
 
+    // check if file exists
+    if (!fs::exists(config_yaml_file)) {
+        std::cerr << "Config file does not exist: " << config_yaml_file << std::endl;
+        return 1;
+    }
 
+    // load Prophesee config file
+
+    load_prophexi_config_file(config_yaml_file, xi_config, proph_R_config, proph_L_config);
+   
     // ERC is the same for both cameras
     proph_R_config.erc = proph_L_config.erc;
     proph_L_config.erc_rate *= 1000000;
